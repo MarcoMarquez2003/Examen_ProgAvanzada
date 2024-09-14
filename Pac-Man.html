@@ -29,39 +29,79 @@ class Rectangulo {
         this.y = y;
     }
     collision(otro) {
-        if (
+        return (
             this.x < otro.x + otro.w &&
             this.x + this.w > otro.x &&
             this.y < otro.y + otro.h &&
             this.y + this.h > otro.y
-        ){
-            return true;
-        }
-        return false;
+        );
     }
 }
+
 var player = new Rectangulo("red", 30, 30, 100, 100);
-var target = new Rectangulo("black", 10, 10, 200, 200);
-//Arriba y abajo
-walls.push(new Rectangulo("blue", 375, 5, 5, 0));
-walls.push(new Rectangulo("blue", 375, 5, 425, 0));
-walls.push(new Rectangulo("blue", 375, 5, 5, 495));
-walls.push(new Rectangulo("blue", 375, 5, 425, 495));
-//Izquierda y derecha
+
+// Crear 50 puntitos como objetivos
+var targets = [];
+for (let i = 0; i < 50; i++) {
+    let targetX = Math.random() * (myCanvas.width - 10); // Limitar para que no salga fuera del canvas
+    let targetY = Math.random() * (myCanvas.height - 10);
+    targets.push(new Rectangulo("black", 10, 10, targetX, targetY));
+}
+
+// Paredes
+walls.push(new Rectangulo("blue", 800, 5, 5, 0));
+walls.push(new Rectangulo("blue", 800, 5, 5, 495));
 walls.push(new Rectangulo("blue", 5, 200, 0, 0));
 walls.push(new Rectangulo("blue", 5, 250, 0, 250));
 walls.push(new Rectangulo("blue", 5, 200, 795, 0));
 walls.push(new Rectangulo("blue", 5, 250, 795, 250));
 
+//Obstaculos Salida de enemigos
+walls.push(new Rectangulo("blue", 100, 5, 350, 250));
+walls.push(new Rectangulo("blue", 5, 55, 345, 200));
+walls.push(new Rectangulo("blue", 5, 55, 450, 200));
+walls.push(new Rectangulo("blue", 25, 5, 350, 200));
+walls.push(new Rectangulo("blue", 25, 5, 425, 200));
+//cuadros
+walls.push(new Rectangulo("blue", 50, 50, 550, 200));
+walls.push(new Rectangulo("blue", 50, 50, 170, 200));
+//Bordes de escape
+walls.push(new Rectangulo("blue", 50, 5, 745, 250));
+walls.push(new Rectangulo("blue", 50, 5, 745, 195));
+walls.push(new Rectangulo("blue", 50, 5, 5, 250));
+walls.push(new Rectangulo("blue", 50, 5, 5, 195));
+//obstaculos
+walls.push(new Rectangulo("blue", 10, 80, 300, 120));
+walls.push(new Rectangulo("blue", 50, 10, 300, 155));
+
+walls.push(new Rectangulo("blue", 10, 80, 490, 120));
+walls.push(new Rectangulo("blue", 50, 10, 450, 155));
+
+walls.push(new Rectangulo("blue", 400, 10, 200, 40));
+walls.push(new Rectangulo("blue", 400, 10, 200, 450));
+
+walls.push(new Rectangulo("blue", 10, 50, 395, 290));
+walls.push(new Rectangulo("blue", 80, 10, 360, 290));
+
+
+
 var direccion = '';
 var mov = 1.5;
 var coin = 0;
-var coinSound = new Audio('donkey-kong-coin.mp3');
+var coinSound = new Audio('pacman-eating-cherry.mp3');
 var pause = false;
 var pacmanIcon = new Image();
 pacmanIcon.src = 'pacman_icon.png';
 
+// Sonido de fondo
+var bgMusic = new Audio('pacman-music.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.5;
+
 document.addEventListener('keypress', function (e) {
+    if (bgMusic.paused) {
+        bgMusic.play();
+    }
     switch (e.keyCode) {
         case 119: // w
             direccion = 'up';
@@ -86,36 +126,30 @@ function update() {
         switch (direccion) {
             case 'up':
                 player.y -= mov;
-                if (player.y < 0) {
-                    player.y = myCanvas.height - player.h;
-                }
+                if (player.y < 0) player.y = myCanvas.height - player.h;
                 break;
             case 'down':
                 player.y += mov;
-                if (player.y > myCanvas.height) {
-                    player.y = 0;
-                }
+                if (player.y > myCanvas.height) player.y = 0;
                 break;
             case 'right':
                 player.x += mov;
-                if (player.x > myCanvas.width) {
-                    player.x = 0;
-                }
+                if (player.x > myCanvas.width) player.x = 0;
                 break;
             case 'left':
                 player.x -= mov;
-                if (player.x < 0) {
-                    player.x = myCanvas.width - player.w;
-                }
+                if (player.x < 0) player.x = myCanvas.width - player.w;
                 break;
         }
 
-        if (player.collision(target)) {
-            coin += 10;
-            target.x = Math.floor(Math.random() * (myCanvas.width - target.w));
-            target.y = Math.floor(Math.random() * (myCanvas.height - target.h));
-            coinSound.play();
-        }
+        targets.forEach(function (target) {
+            if (player.collision(target)) {
+                coin += 10;
+                target.x = Math.floor(Math.random() * (myCanvas.width - target.w));
+                target.y = Math.floor(Math.random() * (myCanvas.height - target.h));
+                coinSound.play();
+            }
+        });
 
         walls.forEach(function (wall) {
             if (player.collision(wall)) {
@@ -151,16 +185,18 @@ function paint() {
         ctx.font = '35px Arial';
         ctx.fillText("Coin: " + coin, 350, 50);
 
-        ctx.fillStyle = target.color;
-        ctx.fillRect(target.x, target.y, target.w, target.h);
-        ctx.strokeRect(target.x, target.y, target.w, target.h);
+        // Dibujar los puntitos (targets)
+        targets.forEach(function (target) {
+            ctx.fillStyle = target.color;
+            ctx.fillRect(target.x, target.y, target.w, target.h);
+            ctx.strokeRect(target.x, target.y, target.w, target.h);
+        });
 
         walls.forEach(function (wall) {
             ctx.fillStyle = wall.color;
             ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
             ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
         });
-
         update();
     }
 
